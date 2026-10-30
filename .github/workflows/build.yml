@@ -8,6 +8,10 @@ on:
     branches: [ main ]
     tags: [ 'v*' ]
 
+# 关键：声明权限，否则默认 GITHUB_TOKEN 只读，无法创建 Release
+permissions:
+  contents: write
+
 jobs:
   build:
     # 运行在 Ubuntu 虚拟机（GitHub 托管的 runner）
