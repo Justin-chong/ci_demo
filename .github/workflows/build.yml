@@ -1,0 +1,66 @@
+name: Build and Release
+
+# 触发条件：
+# 1. push 到 main 分支 → 触发 CI（编译）
+# 2. 推送 v* 开头的 tag（如 v1.0.0）→ 触发 CD（编译 + 发 Release）
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+
+jobs:
+  build:
+    # 运行在 Ubuntu 虚拟机（GitHub 托管的 runner）
+    runs-on: ubuntu-latest
+
+    steps:
+      # 第 1 步：拉取代码
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 第 2 步：安装 CMake（Ubuntu runner 自带 g++，但显式装 cmake 更稳）
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      # 第 3 步：配置构建
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      # 第 4 步：编译
+      - name: Build
+        run: cmake --build build
+
+      # 第 5 步：上传编译产物（可以在 Actions 页面下载）
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci_demo-linux
+          path: build/ci_demo
+
+  # 只在打 tag 时运行：自动创建 Release 并上传产物
+  release:
+    # 需要 build job 先成功
+    needs: build
+    # 只有推送 tag 时才触发
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      # 创建 Release 并上传二进制
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/ci_demo
+          generate_release_notes: true
